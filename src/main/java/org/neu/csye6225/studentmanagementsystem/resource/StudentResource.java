@@ -46,4 +46,42 @@ public class StudentResource {
 		return student;
 	}
 	
+	@GET
+	@Path("{studentId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Student getStudent(@PathParam("studentId") String studentId) {
+		DynamoDB dynamoDB = DynamoDB.getInstance();
+		return (Student)dynamoDB.getItem("Students", studentId);
+	}
+	
+	@PUT
+	@Path("{studentId}")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Student updateStudent(Student student, @PathParam("studentId") String studentId
+			, @PathParam("programId") String programId) {
+		DynamoDB dynamoDB = DynamoDB.getInstance();
+		Program program = (Program)dynamoDB.getItem("Programs", programId);
+		if(program == null)
+			return null;
+		
+		program.getStudents().add(studentId);
+		dynamoDB.addOrUpdateItem("Programs", program);
+		dynamoDB.addOrUpdateItem("Students", student);
+		return student;
+	}
+	
+	@DELETE
+	@Path("{studentId}")
+	public void deleteStudent(@PathParam("programId") String programId
+			, @PathParam("studentId") String studentId) {
+		DynamoDB dynamoDB = DynamoDB.getInstance();
+		Program program = (Program)dynamoDB.getItem("Programs", programId);
+		if(program == null)
+			return;
+		
+		program.getStudents().remove(studentId);
+		dynamoDB.addOrUpdateItem("Programs", program);
+		dynamoDB.deleteItem("Students", studentId);
+	}
 }
