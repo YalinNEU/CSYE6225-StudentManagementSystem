@@ -1,5 +1,6 @@
 package org.neu.csye6225.studentmanagementsystem.database;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,39 +13,49 @@ import org.neu.csye6225.studentmanagementsystem.datamodel.Course;
 import org.neu.csye6225.studentmanagementsystem.datamodel.Program;
 import org.neu.csye6225.studentmanagementsystem.datamodel.Student;
 
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBDeleteExpression;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBScanExpression;
+import com.amazonaws.services.dynamodbv2.model.AttributeDefinition;
+import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
+import com.amazonaws.services.dynamodbv2.model.KeySchemaElement;
+import com.amazonaws.services.dynamodbv2.model.KeyType;
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
+import com.amazonaws.services.dynamodbv2.model.ScalarAttributeType;
+import com.amazonaws.services.dynamodbv2.util.TableUtils;
+
 public class DynamoDB {
-	
+
+	Map<String, Class> classMap = new HashMap<>();
+	private static AmazonDynamoDB dynamoDb;
+	private static DynamoDBMapper mapper;
 	private static DynamoDB instance = null;
-	Map<String, Map<String, BasicObject>> map;
 	
 	public DynamoDB() {
-		map = new HashMap<>();
-		map.put("Programs", new HashMap<String, BasicObject>());
-	    map.put("Courses", new HashMap<String, BasicObject>());
-		map.put("Lectures", new HashMap<String, BasicObject>());
-		map.put("Students", new HashMap<String, BasicObject>());
-		Program program1 = new Program("IS","Information System", new HashSet<>(Arrays.asList("INFO6001","INFO5000","CSYE6225")), new HashSet<>(Arrays.asList("stu001", "stu003")));
-		Program program2 = new Program("CS","Computer Science", new HashSet<>(Arrays.asList("CS5001","CS6570")), new HashSet<>(Arrays.asList("stu002","stu004")));
-		Student student1 = new Student("stu001", "Yalin", "IS", new HashSet<>(Arrays.asList("CSYE6225","INFO5000")));
-		Student student2 = new Student("stu002", "Lynne", "CS", new HashSet<>(Arrays.asList("CS5001","CS6570")));
-		Student student3 = new Student("stu003", "Ben", "IS", new HashSet<>(Arrays.asList("INFO6001","INFO5000")));
-		Student student4 = new Student("stu004", "Jack", "CS", new HashSet<>(Arrays.asList("CS5001")));
-		Course course1 = new Course("CSYE6225", "Cloud Computing", "BOARD", "ROASTER", new HashSet<>(Arrays.asList("stu001")), "stu003");
-		Course course2 = new Course("INFO5000", "JAVA", "BOARD", "ROASTER", new HashSet<>(Arrays.asList("stu001","stu003")), "stu001");
-		Course course3 = new Course("CS5001", "PDP", "BOARD", "ROASTER", new HashSet<>(Arrays.asList("stu004")), "stu002");
-		Course course4 = new Course("CS6570", "OOD", "BOARD", "ROASTER", new HashSet<>(Arrays.asList("stu001","stu003")), "stu004");
-		Course course5 = new Course("INFO6001", "Web Design", "BOARD", "ROASTER", new HashSet<>(Arrays.asList("stu002","stu004")), "stu002");
-		map.get("Programs").put("IS", program1);
-		map.get("Programs").put("CS", program2);
-		map.get("Courses").put("CSYE6225", course1);
-		map.get("Courses").put("INFO5000", course2);
-		map.get("Courses").put("CS5001", course3);
-		map.get("Courses").put("CS6570", course4);
-		map.get("Courses").put("INFO6001", course5);
-		map.get("Students").put("stu001", student1);
-		map.get("Students").put("stu002", student2);
-		map.get("Students").put("stu003", student3);
-		map.get("Students").put("stu004", student4);
+		try {
+			
+			BasicAWSCredentials awsCreds = new BasicAWSCredentials("AKIAIRHF3DK723EIBFTQ"
+					, "eQ23cipHGR1/aA/RDAGgIVn1LtYhkbwKmmqOQIwD");
+			
+			//DefaultAWSCredentialsProviderChain.getInstance()
+			dynamoDb = AmazonDynamoDBClientBuilder
+					.standard()
+					.withCredentials(new AWSStaticCredentialsProvider(awsCreds))
+					.withRegion(Regions.US_WEST_2)
+					.build();
+			
+			mapper = new DynamoDBMapper(dynamoDb);
+			classMap.put("Programs", Program.class);
+		
+		}
+		catch (Exception e) {
+			System.out.println(e.toString());
+		}
 	}
 	
 	public static DynamoDB getInstance() {
@@ -53,57 +64,60 @@ public class DynamoDB {
 		}
 		return instance;
 	}
+	public void createTable(String tableName, String key) throws Exception {
+		List<KeySchemaElement> keySchema = new ArrayList<>();
+		List<AttributeDefinition> attributeDefinitions = new ArrayList<>();
+		
+		keySchema.add(new KeySchemaElement().withAttributeName(key)
+				.withKeyType(KeyType.HASH));
+		
+		attributeDefinitions.add(new AttributeDefinition().withAttributeName(key)
+				.withAttributeType(ScalarAttributeType.S));
+		
+		CreateTableRequest createTableRequest = new CreateTableRequest()
+				.withTableName(tableName)
+				.withKeySchema(keySchema)
+				.withAttributeDefinitions(attributeDefinitions)
+				.withProvisionedThroughput(
+						new ProvisionedThroughput()
+						.withReadCapacityUnits(3L)
+						.withWriteCapacityUnits(3L));
+		
+		TableUtils.createTableIfNotExists(dynamoDb, createTableRequest);
+		TableUtils.waitUntilActive(dynamoDb, tableName);
+		
+	}
 	
-	public void addOrUpdateItem(String tableName, BasicObject obj) {
-		if (!map.containsKey(tableName)) {
-			map.put(tableName, new HashMap<String, BasicObject>());
-		}
-		Map<String, BasicObject> items = map.get(tableName);
-		System.out.println(obj.id);
-		System.out.println(obj);
-		items.put(obj.id, obj);
+	public void addOrUpdateItem(BasicObject obj) {
+		System.out.print(obj);
+		mapper.save(obj);
 	}
 	
 	public BasicObject getItem(String tableName, String key) {
-		BasicObject object = map.get(tableName).get(key);
+		BasicObject object = (BasicObject) mapper.load(classMap.get(tableName), key);
 		return object;
 	}
 	public Set<String> getAllItems(String tableName) {
+		List<BasicObject> objs = mapper.scan(classMap.get(tableName), new DynamoDBScanExpression());
+		Set<String> result = new HashSet<>();
+		for(BasicObject object : objs)
+			result.add(object.id);
+		return result;
 		
-		System.out.println(tableName);
-		
-		if (map.get(tableName) ==  null) {
-			return new HashSet<>();
-		}
-		Map<String, BasicObject> items = map.get(tableName);
-		System.out.print(items.keySet());
-		
-		
-		//return "";
-	    return items.keySet();
 	}
 	
 	public void deleteItem(String tableName, String key) {
-		if (contains(tableName, key)) {
-			map.get(tableName).remove(key);
-		}
+		BasicObject object = (BasicObject) mapper.load(classMap.get(tableName), key);
+		mapper.delete(object, new DynamoDBDeleteExpression());
 	}
 	
 	public boolean contains(String tableName, String key) {
-		if (map.containsKey(tableName) && map.get(tableName).containsKey(key)) {
-			return true;
-		}
-		return false;
+		BasicObject object = (BasicObject) mapper.load(classMap.get(tableName), key);
+		return object != null;
 	}
 	
 	public static void main(String[] args) throws Exception {
-		System.out.println("start db");
 		DynamoDB dynamoDB = DynamoDB.getInstance();
-		dynamoDB.map.put("Programs", new HashMap<String, BasicObject>());
-		System.out.println("insert program map");
-		dynamoDB.map.put("Courses", new HashMap<String, BasicObject>());
-		System.out.println("insert course map");
-		dynamoDB.map.put("Lectures", new HashMap<String, BasicObject>());
-		dynamoDB.map.put("Students", new HashMap<String, BasicObject>());
+		dynamoDB.createTable("Programs", "id");		
 	}
 }

@@ -38,12 +38,12 @@ public class CourseResource {
 		if(dynamoDB.contains("Courses", course.id))
 			return null;
 		
-		dynamoDB.addOrUpdateItem("Courses", course);
+		dynamoDB.addOrUpdateItem(course);
 		BasicObject program = dynamoDB.getItem("Programs", programId);
 		System.out.println(course.id);
 		System.out.println(((Program)program).getCourses());
 		((Program)program).getCourses().add(course.id);
-		dynamoDB.addOrUpdateItem("Programs", program);
+		dynamoDB.addOrUpdateItem(program);
 		return course;
 	}
 	
@@ -63,7 +63,7 @@ public class CourseResource {
 		if(!course.id.equals(courseId))
 			return null;
 		DynamoDB dynamoDB = DynamoDB.getInstance();
-		dynamoDB.addOrUpdateItem("Courses", course);
+		dynamoDB.addOrUpdateItem(course);
 		return course;
 	}
 	
@@ -77,6 +77,6 @@ public class CourseResource {
 		dynamoDB.deleteItem("Courses", courseId);
 		BasicObject program = dynamoDB.getItem("Programs", programId);
 		((Program)program).getCourses().remove(courseId);
-		dynamoDB.addOrUpdateItem("Programs", program);
+		dynamoDB.addOrUpdateItem(program);
 	}
 }

@@ -14,16 +14,16 @@ import javax.ws.rs.core.MediaType;
 
 import org.neu.csye6225.studentmanagementsystem.database.DynamoDB;
 import org.neu.csye6225.studentmanagementsystem.datamodel.BasicObject;
-import org.neu.csye6225.studentmanagementsystem.datamodel.Course;
 import org.neu.csye6225.studentmanagementsystem.datamodel.Program;
 import org.neu.csye6225.studentmanagementsystem.datamodel.Student;
+
 
 @Path("programs/{programId}/students")
 public class StudentResource {
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public Set<String> getCourseList(@PathParam("programId") String programId) {
+	public Set<String> getStudentList(@PathParam("programId") String programId) {
 		DynamoDB dynamoDB = DynamoDB.getInstance();
 		BasicObject program = dynamoDB.getItem("Programs", programId);
 		if(program == null)
@@ -41,8 +41,8 @@ public class StudentResource {
 			return null;
 		
 		program.getStudents().add(student.id);
-		dynamoDB.addOrUpdateItem("Programs", program);
-		dynamoDB.addOrUpdateItem("Students", student);
+		dynamoDB.addOrUpdateItem(program);
+		dynamoDB.addOrUpdateItem(student);
 		return student;
 	}
 	
@@ -66,8 +66,8 @@ public class StudentResource {
 			return null;
 		
 		program.getStudents().add(studentId);
-		dynamoDB.addOrUpdateItem("Programs", program);
-		dynamoDB.addOrUpdateItem("Students", student);
+		dynamoDB.addOrUpdateItem(program);
+		dynamoDB.addOrUpdateItem(student);
 		return student;
 	}
 	
@@ -81,7 +81,7 @@ public class StudentResource {
 			return;
 		
 		program.getStudents().remove(studentId);
-		dynamoDB.addOrUpdateItem("Programs", program);
+		dynamoDB.addOrUpdateItem(program);
 		dynamoDB.deleteItem("Students", studentId);
 	}
 }

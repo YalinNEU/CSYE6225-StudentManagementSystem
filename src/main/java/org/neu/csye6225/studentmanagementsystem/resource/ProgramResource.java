@@ -17,6 +17,8 @@ import org.neu.csye6225.studentmanagementsystem.database.DynamoDB;
 import org.neu.csye6225.studentmanagementsystem.datamodel.BasicObject;
 import org.neu.csye6225.studentmanagementsystem.datamodel.Program;
 
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
+
 
 @Path ("programs")
 public class ProgramResource {
@@ -31,8 +33,10 @@ public class ProgramResource {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Program createProgram(Program program) {
-		DynamoDB dynamoDB = DynamoDB.getInstance();		
-		dynamoDB.addOrUpdateItem("Programs", program);
+		DynamoDB dynamoDB = DynamoDB.getInstance();
+		if(dynamoDB.contains("Programs", program.id)) 
+			return null;
+		dynamoDB.addOrUpdateItem(program);
 		return program;
 	}
 	
@@ -52,7 +56,7 @@ public class ProgramResource {
 	public Program updateProgram(@PathParam("programId") String programId
 			, Program program) {
 		DynamoDB dynamoDB = DynamoDB.getInstance();
-		dynamoDB.addOrUpdateItem("Programs", program);	
+		dynamoDB.addOrUpdateItem(program);	
 		return program;
 	}
 	
